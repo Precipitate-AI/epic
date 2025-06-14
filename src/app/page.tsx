@@ -1,30 +1,13 @@
 // src/app/page.tsx
-import { db } from '@/lib/db';
+
+import Image from 'next/image';
 import Link from 'next/link';
-
-// Manually define our types to match the schema. This is the most reliable way.
-interface Variant {
-  id: string;
-  name: string;
-  value: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  images: string[];
-  category: string;
-  createdAt: Date;
-  updatedAt: Date;
-  variants: Variant[];
-}
+import { prisma } from '@/lib/prisma'; // <-- Standardizing on `prisma`
+import type { Product } from '@prisma/client'; // <-- Best Practice: Import types from Prisma!
 
 export default async function HomePage() {
-  // TypeScript will now understand the exact shape of the data returned here.
-  const products: Product[] = await db.product.findMany({
+  // Fetch products using our standard 'prisma' client
+  const products: Product[] = await prisma.product.findMany({
     include: {
       variants: true,
     },
@@ -34,37 +17,74 @@ export default async function HomePage() {
   });
 
   return (
-    <main className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-8">Our Collection</h1>
+    <main>
+      {/* --- NEW SPLIT-SCREEN HERO SECTION --- */}
+      <section className="bg-gray-50">
+        <div className="container mx-auto grid md:grid-cols-2 items-center">
+          {/* Image Column */}
+          <div className="order-last md:order-first">
+            <Image
+              src="/hero-image.jpg"
+              alt="A happy toddler wearing an EPIC.SUPPLY romper"
+              width={800}
+              height={1200}
+              priority
+              className="w-full h-auto"
+            />
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* We use our 'Product' type here */}
-        {products.map((product: Product) => (
-          <Link
-            href={`/product/${product.slug}`}
-            key={product.id}
-            className="group"
-          >
-            <div className="border rounded-lg overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow duration-300">
-              <img
-                src={product.images[0]} // Now TS knows product.images is a string array
-                alt={product.name}
-                className="w-full h-64 object-cover"
-              />
-              <div className="p-4">
-                <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
-                <p className="text-gray-600 mb-4 h-20 overflow-hidden">
-                  {product.description}
-                </p>
-                <div className="text-lg font-bold text-gray-800">
-                  {/* Now TS knows product.price is a number */}
-                  IDR {product.price.toLocaleString('id-ID')}
-                </div>
-              </div>
+          {/* Text Column */}
+          <div className="text-center md:text-left p-8 md:p-16">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter leading-tight">
+              For the little moments that feel epic.
+            </h1>
+            <p className="mt-4 text-lg text-gray-600 max-w-md mx-auto md:mx-0">
+              Beautifully simple, incredibly soft basics for your child's everyday adventures. Designed for comfort, made for play.
+            </p>
+            <div className="mt-8">
+              <Link href="#products" className="inline-block bg-blue-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-blue-700 transition-colors">
+                Shop The Collection
+              </Link>
             </div>
-          </Link>
-        ))}
-      </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- YOUR EXISTING PRODUCT LIST SECTION --- */}
+      <section id="products" className="py-12 md:py-20">
+        <div className="container mx-auto px-4">
+           <h2 className="text-3xl font-bold text-center mb-10">Our Collection</h2>
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {products.map((product) => (
+              <Link
+                href={`/product/${product.slug}`}
+                key={product.id}
+                className="group"
+              >
+                <div className="border rounded-lg overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                  {/* Using Next/Image here too for optimization, but `img` is also fine */}
+                  <Image
+                    src={product.images[0]}
+                    alt={product.name}
+                    width={500}
+                    height={500}
+                    className="w-full h-64 object-cover"
+                  />
+                  <div className="p-4">
+                    <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
+                    <p className="text-gray-600 mb-4 h-20 overflow-hidden text-ellipsis">
+                      {product.description}
+                    </p>
+                    <div className="text-lg font-bold text-gray-800">
+                      IDR {product.price.toLocaleString('id-ID')}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

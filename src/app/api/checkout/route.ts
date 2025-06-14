@@ -43,8 +43,6 @@ export async function POST(request: Request) {
             where: { id: { in: productIds } }
         });
 
-        // --- START OF FIXES ---
-
         let calculatedTotalAmount = 0;
         const midtransItemDetails = cartItems.map(item => {
             const product = productsInDb.find(p => p.id === item.productId);
@@ -53,24 +51,25 @@ export async function POST(request: Request) {
             }
             calculatedTotalAmount += product.price * item.quantity;
             
-            // FIX 1: Truncate the item name (Midtrans limit is 50 chars)
             const truncatedName = item.name.length > 50 ? item.name.substring(0, 47) + '...' : item.name;
+            
+            // --- THE REAL FIX IS HERE ---
+            // We need to truncate the cart item ID because Midtrans has a 50 character limit.
+            const truncatedId = item.id.length > 50 ? item.id.substring(0, 50) : item.id;
 
             return {
-                id: item.id,
+                id: truncatedId, // Use the truncated ID
                 price: product.price,
                 quantity: item.quantity,
                 name: truncatedName,
             };
         });
         
-        // --- END OF FIXES ---
-
         const orderId = `EPIC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const order = await prisma.order.create({
             data: {
                 id: orderId,
-                totalAmount: calculatedTotalAmount, // USE THE SECURELY CALCULATED TOTAL
+                totalAmount: calculatedTotalAmount,
                 status: 'PENDING',
                 ...customerDetails,
                 orderItems: {
@@ -85,7 +84,7 @@ export async function POST(request: Request) {
         const parameter = {
             transaction_details: {
                 order_id: order.id,
-                gross_amount: calculatedTotalAmount, // USE THE SECURELY CALCULATED TOTAL
+                gross_amount: calculatedTotalAmount,
             },
             item_details: midtransItemDetails,
             customer_details: {
@@ -98,6 +97,10 @@ export async function POST(request: Request) {
                     postal_code: customerDetails.postalCode,
                 }
             },
+            // --- ADD THIS SECTION TO FIX THE REDIRECT ---
+            callbacks: {
+              finish: `${process.env.NEXT_PUBLIC_APP_URL}/order-confirmation`
+            }
         };
 
         const transaction = await snap.createTransaction(parameter);
