@@ -1,7 +1,7 @@
 // prisma/schema.prisma
 
 datasource db {
-  provider = "postgresql" // THIS IS THE CRITICAL CHANGE
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -13,9 +13,9 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   slug        String   @unique
-  description String   @db.Text   // Use @db.Text for Postgres
+  description String   @db.Text
   price       Int
-  images      String[] // NATIVE ARRAY SUPPORT! THIS IS CORRECT FOR POSTGRES.
+  images      String[]
   category    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -32,4 +32,53 @@ model Variant {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([productId, name, value])
+}
+
+// Order Status Enum
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  CANCELED
+}
+
+// Order Model
+model Order {
+  id              String      @id @default(cuid())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  status          OrderStatus @default(PENDING)
+  totalAmount     Int
+  
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  
+  // Indonesian Address Structure
+  shippingAddress String
+  postalCode      String
+  city            String
+  province        String
+
+  // Relation to OrderItems
+  orderItems      OrderItem[]
+}
+
+// OrderItem Model
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  // This is the only change: added onDelete: Cascade
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  productName String
+  image       String
+  price       Int
+  quantity    Int
+  
+  variants    Json
+
+  @@index([orderId])
 }
