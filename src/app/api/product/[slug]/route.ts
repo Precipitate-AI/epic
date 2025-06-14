@@ -1,18 +1,18 @@
 // src/app/api/product/[slug]/route.ts
-import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma'; // <-- USE THE SHARED CLIENT
 
 export async function GET(
     request: Request,
     { params }: { params: { slug: string } }
 ) {
     try {
-        const product = await db.product.findUnique({
-            where: {
-                slug: params.slug,
-            },
+        const slug = params.slug;
+
+        const product = await prisma.product.findUnique({
+            where: { slug: slug },
             include: {
-                variants: true, // We need the variants too!
+                variants: true, // Include the variants in the response
             },
         });
 
@@ -23,7 +23,7 @@ export async function GET(
         return NextResponse.json(product);
 
     } catch (error) {
-        console.error('[PRODUCT_GET]', error);
+        console.error('[PRODUCT_GET_ERROR]', error);
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }
