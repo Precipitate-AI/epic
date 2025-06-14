@@ -2,7 +2,7 @@
 import { db } from '@/lib/db';
 import Link from 'next/link';
 
-// Manually define our types to match the schema. This is the most reliable way.
+// We only need one interface, because the database shape now matches our component's needs.
 interface Variant {
   id: string;
   name: string;
@@ -15,7 +15,7 @@ interface Product {
   slug: string;
   description: string;
   price: number;
-  images: string[];
+  images: string[]; // It's an array from the database!
   category: string;
   createdAt: Date;
   updatedAt: Date;
@@ -23,7 +23,7 @@ interface Product {
 }
 
 export default async function HomePage() {
-  // TypeScript will now understand the exact shape of the data returned here.
+  // Fetch the data. No transformation is needed afterwards.
   const products: Product[] = await db.product.findMany({
     include: {
       variants: true,
@@ -38,8 +38,7 @@ export default async function HomePage() {
       <h1 className="text-3xl font-bold mb-8">Our Collection</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* We use our 'Product' type here */}
-        {products.map((product: Product) => (
+        {products.map((product) => (
           <Link
             href={`/product/${product.slug}`}
             key={product.id}
@@ -47,7 +46,7 @@ export default async function HomePage() {
           >
             <div className="border rounded-lg overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow duration-300">
               <img
-                src={product.images[0]} // Now TS knows product.images is a string array
+                src={product.images[0]} // This just works now.
                 alt={product.name}
                 className="w-full h-64 object-cover"
               />
@@ -57,7 +56,6 @@ export default async function HomePage() {
                   {product.description}
                 </p>
                 <div className="text-lg font-bold text-gray-800">
-                  {/* Now TS knows product.price is a number */}
                   IDR {product.price.toLocaleString('id-ID')}
                 </div>
               </div>

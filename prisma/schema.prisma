@@ -1,0 +1,35 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql" // THIS IS THE CRITICAL CHANGE
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @db.Text   // Use @db.Text for Postgres
+  price       Int
+  images      String[] // NATIVE ARRAY SUPPORT! THIS IS CORRECT FOR POSTGRES.
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variants Variant[]
+}
+
+model Variant {
+  id        String @id @default(cuid())
+  name      String
+  value     String
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, name, value])
+}
